@@ -114,7 +114,6 @@ Stress level can be `Low`, `Medium`, `High` or `Very High`. These are the same v
 
 ## Things I want to improve
 
-- Deploy the API and the app online so people can use it without running anything
 - Try other models and compare them properly
 - Add more details to the result, like which habits affect the score the most
 
