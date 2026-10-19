@@ -121,3 +121,7 @@ Stress level can be `Low`, `Medium`, `High` or `Very High`. These are the same v
 ## A note
 
 The dataset is small and comes from a survey, so the predictions will not be perfect and should not be used to make real health decisions. If you or someone you know is struggling, please talk to someone you trust or a professional.
+
+## DEPLOYMENT
+here's the link: https://machine-learning-on-the-gogitcdmachine-learning-on-the-go-fx7s.streamlit.app/
+
