@@ -1,10 +1,27 @@
 import random
-import requests
+from pathlib import Path
+
+import joblib
+import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="Autumn Mind", page_icon="🍂", layout="centered")
 
-API_URL_DEFAULT = "http://127.0.0.1:8000/predict"
+BASE = Path(__file__).parent
+MODEL_FILES = [BASE / "Machine learning on the go.pkl",
+               BASE / "Machine_learning_on_the_go.pkl"]
+
+
+@st.cache_resource
+def load_model():
+    for f in MODEL_FILES:
+        if f.exists():
+            return joblib.load(f)
+    raise FileNotFoundError(
+        "Model .pkl file not found next to streamlit_app.py")
+
+
+model = load_model()
 
 QUOTES = [
     "Even the trees let go of what no longer serves them, and they bloom again.",
@@ -48,7 +65,7 @@ CSS = """
     background: linear-gradient(160deg, #fff3e0 0%, #ffd9a8 40%, #f6a86b 75%, #c8643a 100%);
     background-attachment: fixed;
 }
-html, body, [class*="css"], .stApp label, .stApp p, .stApp span, .stApp div {
+html, body, [class*="css"], .stApp label, .stApp p {
     font-family: 'Nunito', sans-serif;
 }
 .stApp, .stApp label, .stApp p, .stApp li { color: #4a2512; }
@@ -128,13 +145,8 @@ div[data-baseweb="select"] > div, .stNumberInput input, .stTextInput input {
 """
 
 st.markdown(CSS, unsafe_allow_html=True)
-st.markdown(f'<div class="quote-wrap">{quotes_html}</div>{leaves_html}', unsafe_allow_html=True)
-
-# ---------- Sidebar ----------
-with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    api_url = st.text_input("API address", API_URL_DEFAULT)
-    st.caption("Start your FastAPI server first: `uvicorn main:app --reload`")
+st.markdown(
+    f'<div class="quote-wrap">{quotes_html}</div>{leaves_html}', unsafe_allow_html=True)
 
 # ---------- Header ----------
 st.markdown(
@@ -145,79 +157,80 @@ st.markdown(
 
 # ---------- Form ----------
 with st.form("predict_form"):
-    st.markdown('<div class="section-title">About you</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">About you</div>',
+                unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     age = c1.number_input("Age", min_value=1, max_value=100, value=20, step=1)
     gender = c2.selectbox("Gender", ["Male", "Female"])
 
     c3, c4 = st.columns(2)
-    academic_level = c3.selectbox("Academic level", ["High School", "Undergraduate", "Graduate"])
+    academic_level = c3.selectbox(
+        "Academic level", ["High School", "Undergraduate", "Graduate"])
     country_choice = c4.selectbox(
         "Country",
-        ["India", "USA", "Canada", "Australia", "UK", "Germany", "Mexico", "Turkey", "France", "Other…"],
+        ["India", "USA", "Canada", "Australia", "UK",
+            "Germany", "Mexico", "Turkey", "France", "Other…"],
     )
     country = country_choice
     if country_choice == "Other…":
         country = st.text_input("Type your country", value="Pakistan")
 
-    st.markdown('<div class="section-title">Social media habits</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Social media habits</div>',
+                unsafe_allow_html=True)
     c5, c6 = st.columns(2)
     platform = c5.selectbox(
         "Most used platform",
         ["Instagram", "Facebook", "TikTok", "YouTube", "Snapchat", "Twitter", "WhatsApp",
          "LinkedIn", "WeChat", "LINE", "KakaoTalk", "VKontakte"],
     )
-    purpose = c6.selectbox("Main purpose of use", ["Entertainment", "Networking", "Education", "News"])
+    purpose = c6.selectbox("Main purpose of use", [
+                           "Entertainment", "Networking", "Education", "News"])
     usage = st.slider("Average daily usage (hours)", 0, 24, 4)
     unlocks = st.slider("Phone unlocks per day", 0, 300, 60)
 
-    st.markdown('<div class="section-title">Daily life</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Daily life</div>',
+                unsafe_allow_html=True)
     c7, c8, c9 = st.columns(3)
     study = c7.slider("Study hours", 0, 24, 3)
     activity = c8.slider("Physical activity hours", 0, 24, 1)
     sleep = c9.slider("Sleep hours", 0, 24, 7)
-    stress = st.select_slider("Stress level", options=["Low", "Medium", "High", "Very High"], value="Medium")
+    stress = st.select_slider("Stress level", options=[
+                              "Low", "Medium", "High", "Very High"], value="Medium")
 
     submitted = st.form_submit_button("🍂 Reveal my score")
 
 # ---------- Prediction ----------
 if submitted:
-    payload = {
-        "age": int(age),
-        "gender": gender,
-        "academic_level": academic_level,
-        "most_used_platform": platform,
-        "purpose_of_use": purpose,
-        "avg_daily_usage_hours": int(usage),
-        "daily_unlocks": int(unlocks),
-        "study_hours": int(study),
-        "physical_activity_hours": int(activity),
-        "sleep_hours_per_night": int(sleep),
-        "stress_level": stress,
-        "country": country,
-    }
+    input_row = pd.DataFrame([{
+        "Age": int(age),
+        "Gender": gender,
+        "Country": country,
+        "Academic_Level": academic_level,
+        "Most_Used_Platform": platform,
+        "Purpose_Of_Use": purpose,
+        "Avg_Daily_Usage_Hours": int(usage),
+        "Daily_Unlocks": int(unlocks),
+        "Study_Hours": int(study),
+        "Physical_Activity_Hours": int(activity),
+        "Sleep_Hours_Per_Night": int(sleep),
+        "Stress_Level": stress,
+    }])
     try:
         with st.spinner("Gathering the leaves..."):
-            r = requests.post(api_url, json=payload, timeout=15)
-        if r.status_code == 200:
-            score = r.json()["predicted_mental_health_score"]
-            if score >= 7.5:
-                label, msg = "Flourishing 🌳", "You seem to be in a good place. Keep nurturing your habits."
-            elif score >= 6:
-                label, msg = "Steady 🍁", "Doing okay. Small tweaks to sleep or screen time can help."
-            else:
-                label, msg = "Needs some care 🍂", "Be kind to yourself. More rest and a little less scrolling can help."
-            st.markdown(
-                f'<div class="result-card"><div class="result-score">{score:.2f}</div>'
-                f'<div class="result-label">{label}</div><div>{msg}</div>'
-                f'<div class="result-note">This is a model estimate, not a medical diagnosis. '
-                f"If you are struggling, please talk to someone you trust or a professional.</div></div>",
-                unsafe_allow_html=True,
-            )
-            st.progress(min(max(score / 10, 0.0), 1.0))
+            score = round(float(model.predict(input_row)[0]), 2)
+        if score >= 7.5:
+            label, msg = "Flourishing 🌳", "You seem to be in a good place. Keep nurturing your habits."
+        elif score >= 6:
+            label, msg = "Steady 🍁", "Doing okay. Small tweaks to sleep or screen time can help."
         else:
-            st.error(f"The API returned an error ({r.status_code}): {r.text}")
-    except requests.exceptions.ConnectionError:
-        st.error("Could not reach the API. Make sure your FastAPI server is running and the address in the sidebar is correct.")
+            label, msg = "Needs some care 🍂", "Be kind to yourself. More rest and a little less scrolling can help."
+        st.markdown(
+            f'<div class="result-card"><div class="result-score">{score:.2f}</div>'
+            f'<div class="result-label">{label}</div><div>{msg}</div>'
+            f'<div class="result-note">This is a model estimate, not a medical diagnosis. '
+            f"If you are struggling, please talk to someone you trust or a professional.</div></div>",
+            unsafe_allow_html=True,
+        )
+        st.progress(min(max(score / 10, 0.0), 1.0))
     except Exception as e:
         st.error(f"Something went wrong: {e}")
