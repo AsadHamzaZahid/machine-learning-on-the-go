@@ -31,7 +31,7 @@ class input(BaseModel):
     study_hours: int = Field(..., ge=0, le=24)
     physical_activity_hours: int = Field(..., ge=0, le=24)
     sleep_hours_per_night: int = Field(..., ge=0, le=24)
-    stress_level: Literal['Low', "Middle", "High", 'Super High']
+    stress_level: Literal['Low', "Medium", "High", 'Very High']
     country: str
 
 
